@@ -1,0 +1,6 @@
+name = Simple Voicemail
+description = "A simple voicemail system using Tropo"
+package = "Voicemail"
+core = 7.x
+dependencies[] = mimemail
+dependencies[] = mailsystem
