@@ -90,9 +90,9 @@ function simple_voicemail_transcription($id) {
   file_save_data($json, "'public://voicemail/$id.txt");
 
   $caller = explode('-', $id);
-  $file = file_stream_wrapper_get_instance_by_uri('public://voicemail')->getDirectoryPath()."/$id.wav";
+  $file = file_stream_wrapper_get_instance_by_uri("public://voicemail/$id.wav")->realpath();
   $attachment = array(
-    'filecontent' => file_get_contents($file),
+    'filepath' => $file,
     'filename' => $id . '.wav',
     'filemime' => 'audio/wav'
   );
@@ -104,9 +104,9 @@ function simple_voicemail_transcription($id) {
     'body' => "From: {$caller[0]}\n\n{$transcript->result->transcription}",
   );
 
-  $mail = drupal_mail('voicemail', $params['key'], $params['to'], language_default(), $params, null, 1);
+  $mail = drupal_mail('simple_voicemail', $params['key'], $params['to'], language_default(), $params, null, 1);
   if ($mail['result'] != 1) {
-    watchdog('voicemail', 'Email not sent', WATCHDOG_ERROR);
+    watchdog('simple_voicemail', 'Email not sent', WATCHDOG_ERROR);
   }
 }
 
@@ -128,7 +128,7 @@ function simple_voicemail_script() {
   $greeting = variable_get('voicemail_greeting', '');
   $transfer = variable_get('transfer_to', '');
   if (empty($greeting)) {
-    $greeting = "<speak><say-as interpret-as='vxml:digits'>{\$currentCall->called}</say-as> is not available. Leave a message after the beep</speak>";
+    $greeting = 'The person at {number} is not available. Leave a message after the beep';
   }
 
   drupal_add_http_header('Content-Type', 'text/plain');
@@ -138,6 +138,9 @@ function simple_voicemail_script() {
 \$callerID = \$currentCall->callerID;
 \$time = date('Y-m-d-Gis');
 \$id = \$callerID . '-' . \$time;
+\$mynum = implode(' ',str_split(\$currentCall->calledID));
+
+\$greeting = str_replace('{number}', \$mynum, $greeting);
 
 \$transfer = "$transfer";
 if (!empty(\$transfer)) {
@@ -147,14 +150,12 @@ if (!empty(\$transfer)) {
     'timeout' => 150,
     'onTimeout' => voicemail(\$id)
     ));
-
 } else {
   voicemail(\$id);
 }
 
-
 function voicemail(\$id) {
-  record("$greeting", array (
+  record("\$greeting", array (
     "beep" => true,
     "maxTime" => 900,
     "recordURI"=>"$baseurl/message/\$id",
