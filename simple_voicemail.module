@@ -137,31 +137,37 @@ function simple_voicemail_script() {
   print <<< EOF
 <?php
 \$callerID = \$currentCall->callerID;
-\$time = date('Y-m-d-Gis');
+\$time = date('Y-m-d-His');
 \$id = \$callerID . '-' . \$time;
 
 \$mynum = implode(' ',str_split(\$currentCall->calledID));
 \$greeting = "$greeting";
 
-\$transfer = "$transfer";
-if (!empty(\$transfer)) {
+\$transfer = '$transfer';
+if (empty(\$transfer)) {
+  _log('Straight to voicemail');
+  voicemail();
+} else {
+  _log('Transfering to ' . \$transfer);
   \$result = transfer(\$transfer, array(
     'playvalue' => "$ring",
     'playrepeat' => 2000,
-    'timeout' => 150,
-    'onTimeout' => voicemail(\$id, \$greeting)
+    'timeout' => 20,
+    'onTimeout' => "voicemail",
+    'onBusy' => "voicemail",
+    'onError' => "voicemail",
+    'onCallFailure' => "voicemail",
     ));
-} else {
-  voicemail(\$id, \$greeting);
 }
 
-function voicemail(\$id, \$greeting) {
-  record(\$greeting, array (
+function voicemail() {
+  record(\$GLOBALS['greeting'], array (
     "beep" => true,
     "maxTime" => 900,
-    "recordURI"=>"$baseurl/message/\$id",
-    "transcriptionOutURI" => "$baseurl/transcription/\$id",
-    "transcriptionID" => \$id,
+    "bargein" => false,
+    "recordURI"=>"$baseurl/message/{\$GLOBALS['id']}",
+    "transcriptionOutURI" => "$baseurl/transcription/{\$GLOBALS['id']}",
+    "transcriptionID" => \$GLOBALS['id'],
     "voice" => "Veronica"
     )
   );
