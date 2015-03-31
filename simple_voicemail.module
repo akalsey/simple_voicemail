@@ -136,28 +136,32 @@ function simple_voicemail_script() {
 
   print <<< EOF
 <?php
-\$callerID = \$currentCall->callerID;
-\$time = date('Y-m-d-His');
-\$id = \$callerID . '-' . \$time;
-
-\$mynum = implode(' ',str_split(\$currentCall->calledID));
-\$greeting = "$greeting";
-
-\$transfer = '$transfer';
-if (empty(\$transfer)) {
-  _log('Straight to voicemail');
-  voicemail();
+if (\$currentCall->channel == 'TEXT') {
+  say('This number cannot receive text messages');
 } else {
-  _log('Transfering to ' . \$transfer);
-  \$result = transfer(\$transfer, array(
-    'playvalue' => "$ring",
-    'playrepeat' => 2000,
-    'timeout' => 20,
-    'onTimeout' => "voicemail",
-    'onBusy' => "voicemail",
-    'onError' => "voicemail",
-    'onCallFailure' => "voicemail",
-    ));
+  \$callerID = \$currentCall->callerID;
+  \$time = date('Y-m-d-His');
+  \$id = \$callerID . '-' . \$time;
+
+  \$mynum = implode(' ',str_split(\$currentCall->calledID));
+  \$greeting = "$greeting";
+
+  \$transfer = '$transfer';
+  if (empty(\$transfer)) {
+    _log('Straight to voicemail');
+    voicemail();
+  } else {
+    _log('Transfering to ' . \$transfer);
+    \$result = transfer(\$transfer, array(
+      'playvalue' => "$ring",
+      'playrepeat' => 2000,
+      'timeout' => 20,
+      'onTimeout' => "voicemail",
+      'onBusy' => "voicemail",
+      'onError' => "voicemail",
+      'onCallFailure' => "voicemail",
+      ));
+  }
 }
 
 function voicemail() {
