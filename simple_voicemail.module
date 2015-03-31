@@ -87,12 +87,11 @@ function simple_voicemail_transcription($id) {
   $json = file_get_contents("php://input");
   $transcript = json_decode($json);
 
-  file_save_data($json, "'public://voicemail/$id.txt");
+  file_save_data($json, "public://voicemail/$id.txt");
 
   $caller = explode('-', $id);
-  $file = file_stream_wrapper_get_instance_by_uri("public://voicemail/$id.wav")->realpath();
   $attachment = array(
-    'filepath' => $file,
+    'filepath' => "public://voicemail/$id.wav",
     'filename' => $id . '.wav',
     'filemime' => 'audio/wav'
   );
@@ -102,12 +101,14 @@ function simple_voicemail_transcription($id) {
     'to' => variable_get('mail_to', ''),
     'subject' => 'Voicemail from ' . $caller[0],
     'body' => "From: {$caller[0]}\n\n{$transcript->result->transcription}",
+    'attachment' => $attachment
   );
 
   $mail = drupal_mail('simple_voicemail', $params['key'], $params['to'], language_default(), $params, null, 1);
   if ($mail['result'] != 1) {
     watchdog('simple_voicemail', 'Email not sent', WATCHDOG_ERROR);
   }
+  print_r($mail);
 }
 
 // implements hook_mail
@@ -128,7 +129,7 @@ function simple_voicemail_script() {
   $greeting = variable_get('voicemail_greeting', '');
   $transfer = variable_get('transfer_to', '');
   if (empty($greeting)) {
-    $greeting = 'The person at {number} is not available. Leave a message after the beep';
+    $greeting = 'The person at $mynum is not available. Leave a message after the beep';
   }
 
   drupal_add_http_header('Content-Type', 'text/plain');
@@ -138,9 +139,9 @@ function simple_voicemail_script() {
 \$callerID = \$currentCall->callerID;
 \$time = date('Y-m-d-Gis');
 \$id = \$callerID . '-' . \$time;
-\$mynum = implode(' ',str_split(\$currentCall->calledID));
 
-\$greeting = str_replace('{number}', \$mynum, $greeting);
+\$mynum = implode(' ',str_split(\$currentCall->calledID));
+\$greeting = "$greeting";
 
 \$transfer = "$transfer";
 if (!empty(\$transfer)) {
@@ -148,14 +149,14 @@ if (!empty(\$transfer)) {
     'playvalue' => "$ring",
     'playrepeat' => 2000,
     'timeout' => 150,
-    'onTimeout' => voicemail(\$id)
+    'onTimeout' => voicemail(\$id, \$greeting)
     ));
 } else {
-  voicemail(\$id);
+  voicemail(\$id, \$greeting);
 }
 
-function voicemail(\$id) {
-  record("\$greeting", array (
+function voicemail(\$id, \$greeting) {
+  record(\$greeting, array (
     "beep" => true,
     "maxTime" => 900,
     "recordURI"=>"$baseurl/message/\$id",
